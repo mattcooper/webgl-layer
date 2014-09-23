@@ -1,0 +1,212 @@
+<html>
+<head>
+  <title>Places API Search Sample</title>
+  <style>
+      html, body, #map-div {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Roboto', sans-serif;
+      }
+
+      #places-search {
+        position: absolute;
+        top: 20px;
+        left: 110px;
+        background: white;
+        padding: 0 20px 10px 20px;
+        border: 1px solid black;
+        min-width: 115px;
+      }
+
+      #places-search div{
+        margin: 10px 0px
+      }
+
+      button{
+        float: right;
+        margin: 0 5px;        
+      }
+    </style>
+
+    <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+
+    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+
+    <!-- WebGL Layer -->
+    <script src="../CanvasLayer.js"></script>
+    <script src="../ShaderProgram.js"></script>
+    <script src="../libtess.cat.js"></script>
+    <script src="../WebGLLayer.js"></script>
+
+    <!-- Using a JSTS Index for Spatial Queries -->
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/javascript.util.js"></script>
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/jsts.js"></script>
+
+    <script>
+      
+      //Map + WebGL Layer
+      var map;
+      var dataLayer;
+
+      //JSTS Index
+      var index = new jsts.index.strtree.STRtree();
+
+      var placesService;
+      var markers = [];
+      var infowindow = new google.maps.InfoWindow();
+
+      function init(){
+
+        var mapOptions = {
+          zoom: 12,
+          center: new google.maps.LatLng(51.50711, -0.123124),
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+        };
+
+        var mapDiv = document.getElementById('map-div');
+        map = new google.maps.Map(mapDiv, mapOptions);
+
+        //Set up tileserver and lock to level 12 zoom.
+        dataLayer = new WebGLLayer(map);
+        dataLayer.tilebase = 'http://130.211.58.85:8080/postcodes/';
+        dataLayer.zoomlock = 12;
+
+        //Overwrite onAddFeature to add features to index
+        var reader = new jsts.io.GeoJSONReader();
+        dataLayer.onAddFeature = function(feature){
+          var feat = reader.read(feature);
+          //Try inserting the point into the index. Won't work if the index has already been built.
+          try{
+            index.insert(feat.geometry.getEnvelopeInternal(), feat);
+          }catch(e){
+            
+          }
+        }
+
+        //Set up places service for Places API Searches.
+        placesService = new google.maps.places.PlacesService(map);
+
+        dataLayer.start();
+      }
+      document.addEventListener('DOMContentLoaded', init, false);
+      
+      /**
+       * Function for searching on a given query and set radius (in degrees)
+       */
+      function placesSearch(query, radius){
+
+        //Perform Places API Search
+        placesService.textSearch({'query': query}, function(results, status, pagination) {
+          
+          if (status != google.maps.places.PlacesServiceStatus.OK) {
+           return;
+          }
+
+          for(var res = 0; res < results.length; res++){
+            var result = results[res];
+            console.log(result);
+            console.log(result.name);
+            console.log(result.geometry.location)
+            
+            result.radius = radius;
+            result.count = spatialSearch(result.geometry.location, radius);
+
+            createMarker(result);
+          }
+
+          if (pagination.hasNextPage) {
+            pagination.nextPage();
+          }
+        });
+      }
+
+      function createMarker(result){
+        var marker = new google.maps.Marker({
+          position: result.geometry.location,
+          map: map,
+          title: result.name
+        });
+
+        marker.html = 
+        '<h3>' + result.name + '</h3>' + 
+        '<p>' + result.formatted_address + '</p>' +
+        '<p> There are ' + result.count + ' postcodes within ' + result.radius + ' degrees of this point.</p>';
+
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.setContent(this.html);
+          infowindow.open(map,this);
+        });
+
+        markers.push(marker);
+      }
+      
+
+      function spatialSearch(latlng, radius){
+
+        var geometryFactory = new jsts.geom.GeometryFactory();
+        var marker = geometryFactory.createPoint(new jsts.geom.Coordinate(latlng.lng(), latlng.lat()));
+        var buffer = marker.buffer(radius);
+
+        var env = buffer.computeEnvelopeInternal();
+        var result = index.query(env);
+        for(var i = 0; i < result.length; i++){
+          if(buffer.intersects(result[i].geometry)){
+            var idx = result[i].properties.index;
+            dataLayer.changePointColor(idx, [0.0, 0.0, 1.0]);
+          }
+        }
+        dataLayer.scheduleUpdate(true); 
+        return result.length;
+      }
+
+      //UTILS.
+      var clearColors = function(){
+        for(var i = 2; i < dataLayer.features_.points.floats.length; i+= 3){
+          dataLayer.changePointColor([1.0, 0.0, 0.0]);
+        }
+        dataLayer.scheduleUpdate(true); 
+      }
+
+      function clearResults(){
+        clearColors();
+        for(var i = 0; i < markers.length; i++){
+          markers[i].setMap(null);
+        }
+
+        markers = [];
+      }
+
+      //DOM Manipulation for Input Fields
+      function runSearch(){
+        placesSearch(document.querySelector('#search-query').value, document.querySelector('#radius').value);
+      }
+
+      function sliderUpdate(value){
+        document.querySelector('#radius').value = value;
+      }
+   
+    </script>
+</head>
+<body>
+    <div id="map-div"></div>
+    <div id="places-search">
+
+      <div>
+        <label for="search-query">Places API Query</label>
+        <input type="text" id="search-query" placeholder="Hotels in London"></input>
+      </div>
+
+      <div>
+        <label for="search-radius">Seach Radius</label>
+        <input type="range" min="0" max="0.1" value="0.005" step="0.005" id="search-radius" step="1" onchange="sliderUpdate(value)">
+        <output for="search-radius" id="radius">0.005</output>
+      </div>
+
+      <div>
+        <button onclick="runSearch()">Run Search</button>
+        <button onclick="clearResults()">Clear Search Results</button>
+      </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<html>
+<head>
+	<title>Tiling Sample</title>
+	<style>
+      html, body, #map-div {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+    </style>
+    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+
+    <!-- WebGL Layer -->
+    <script src="../CanvasLayer.js"></script>
+    <script src="../ShaderProgram.js"></script>
+    <script src="../libtess.cat.js"></script>
+    <script src="../WebGLLayer.js"></script>
+
+    <!-- Using a JSTS Index for Spatial Queries -->
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/javascript.util.js"></script>
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/jsts.js"></script>
+
+    <script>
+      var map;
+      var dataLayer;
+
+      var defaultColor = [1.0, 0., 0.];
+      var highlightColor = [0., 0., 1.0];
+
+      var index = new jsts.index.strtree.STRtree();
+
+      function init(){
+        // initialize the map
+        var mapOptions = {
+          zoom: 14,
+          center: new google.maps.LatLng(51.535798, 0.081475),
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+        };
+
+        var mapDiv = document.getElementById('map-div');
+        map = new google.maps.Map(mapDiv, mapOptions);
+
+        var drawingManager = new google.maps.drawing.DrawingManager({
+          drawingMode: google.maps.drawing.OverlayType.POLYLINE,
+          drawingControl: true,
+          drawingControlOptions: {
+            position: google.maps.ControlPosition.TOP_CENTER,
+            drawingModes: [
+              google.maps.drawing.OverlayType.POLYGON,
+              google.maps.drawing.OverlayType.POLYLINE
+            ]
+          }
+        });
+        drawingManager.setMap(map);
+
+        google.maps.event.addListener(drawingManager, 'overlaycomplete', overlaySearch);
+
+        dataLayer = new WebGLLayer(map);
+
+        //Overwrite onAddFeature to add features to index
+        var reader = new jsts.io.GeoJSONReader();
+        dataLayer.onAddFeature = function(feature){
+          var feat = reader.read(feature);
+          //Try inserting the point into the index. Won't work if the index has already been built.
+          try{
+            index.insert(feat.geometry.getEnvelopeInternal(), feat);
+          }catch(e){
+            
+          }
+        }
+
+        dataLayer.loadGeoJson('lowres.lsoa.geojson');
+
+        dataLayer.start();
+      }
+      document.addEventListener('DOMContentLoaded', init, false);
+
+      var overlaySearch = function(event){
+        var geometryFactory = new jsts.geom.GeometryFactory();
+        var reader = new jsts.io.WKTReader(geometryFactory);
+        var overlay = event.overlay;
+        var wkt = overlayToWKT(overlay, event.type);
+        var geom = reader.read(wkt);
+        switch(event.type){
+          case google.maps.drawing.OverlayType.POLYGON:
+            var env = geom.computeEnvelopeInternal();
+            break;
+          case google.maps.drawing.OverlayType.POLYLINE:
+            var buffer = geom.buffer(0.005); 
+            var env = geom.computeEnvelopeInternal();
+            geom = buffer;
+            break;
+        }
+        var result = index.query(env);
+        for(var i = 0; i < result.length; i++){
+          var res = result[i].geometry;
+          if(res.geometries){
+            res.geometries.map(function(resGeom){
+              if(geom.intersects(resGeom)){
+                var idxStart = result[i].properties.indexStart;
+                var idxEnd = result[i].properties.indexEnd;
+                dataLayer.changePolyColor(idxStart, idxEnd, highlightColor);
+              }
+            })
+          }else if(res.intersects(geom)){
+            switch(res.getGeometryType()){
+              case 'Point':
+                var idx = result[i].properties.index;
+                dataLayer.changePointColor(idx, highlightColor);
+                break;
+              case 'Polygon':
+                var idxStart = result[i].properties.indexStart;
+                var idxEnd = result[i].properties.indexEnd;
+                dataLayer.changePolyColor(idxStart, idxEnd, highlightColor);
+                break;
+            }
+          }else{
+
+          }
+        }
+      }
+
+      var overlayToWKT = function(overlay, type){
+        var path = overlay.getPath();
+        switch(type){
+          case google.maps.drawing.OverlayType.POLYGON:
+            var wkt = 'POLYGON((' + path.getAt(0).lng() + ' ' + path.getAt(0).lat();
+            for(var i = 1; i < path.getLength(); i++){
+              var latlng = path.getAt(i);
+              wkt = wkt + ', ' + latlng.lng() + ' ' + latlng.lat();
+            }
+            wkt = wkt + ', ' + path.getAt(0).lng() + ' ' + path.getAt(0).lat() + '))';
+            return wkt;
+          case google.maps.drawing.OverlayType.POLYLINE:
+            var wkt = 'LINESTRING( ' + path.getAt(0).lng() + ' ' + path.getAt(0).lat();
+              for(var i = 1; i < path.getLength(); i++){
+                var latlng = path.getAt(i);
+                wkt = wkt + ', ' + latlng.lng() + ' ' + latlng.lat();
+              }
+            wkt = wkt + ')';
+            return wkt;
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="map-div"></div>
+</body>
+</html>

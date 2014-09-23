@@ -1,0 +1,77 @@
+<html>
+<head>
+  <title>Tiling Sample</title>
+  <style>
+      html, body, #map-div {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+    </style>
+    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+    <!-- WebGL Layer -->
+    <script src="../CanvasLayer.js"></script>
+    <script src="../ShaderProgram.js"></script>
+    <script src="../libtess.cat.js"></script>
+    <script src="../WebGLLayer.js"></script>
+
+    <!-- Using a JSTS Index for Spatial Queries -->
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/javascript.util.js"></script>
+    <script src="https://rawgit.com/bjornharrtell/jsts/master/lib/jsts.js"></script>
+
+    <script>
+      var map;
+      var dataLayer;
+
+      var defaultColor = [1.0, 0., 0.];
+      var highlightColor = [0., 0., 1.0];
+
+      var index = new jsts.index.strtree.STRtree();
+
+      function init(){
+        // initialize the map
+        var mapOptions = {
+          zoom: 14,
+          center: new google.maps.LatLng(51.535798, 0.081475),
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+        };
+
+        var mapDiv = document.getElementById('map-div');
+        map = new google.maps.Map(mapDiv, mapOptions);
+
+        dataLayer = new WebGLLayer(map);
+
+        //Overwrite onAddFeature to add features to index
+        var reader = new jsts.io.GeoJSONReader();
+        dataLayer.onAddFeature = function(feature){
+          var feat = reader.read(feature);
+          //Try inserting the point into the index. Won't work if the index has already been built.
+          try{
+            index.insert(feat.geometry.getEnvelopeInternal(), feat);
+          }catch(e){
+            
+          }
+        }
+
+        loadBusData(38);
+
+        dataLayer.loadGeoJson('wards.geojson');
+
+        dataLayer.start();
+      }
+      document.addEventListener('DOMContentLoaded', init, false);    
+
+      function loadBusData(routeNumber) {
+        $.get('http://traintimes.org.uk/map/london-buses/data/' + routeNumber, function(res){
+          console.log(res);
+        });
+      };
+
+    </script>
+</head>
+<body>
+    <div id="map-div"></div>
+</body>
+</html>
