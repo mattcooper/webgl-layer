@@ -1,0 +1,54 @@
+html, body, #info{
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Roboto, helvetica, arial, sans-serif;
+}
+
+#header-map{
+  margin: 0;
+  padding: 0;
+  height: 700px;
+}
+
+#map-canvas{
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+
+#headline {
+  padding: 0.8em;
+  color: #F5F5F5;
+  font-family: Roboto, helvetica, arial, sans-serif;
+  background-color: #60729A;
+}
+
+.container {
+  margin: auto;
+  max-width: 980px;
+}
+
+#info {
+  position: relative;
+}
+
+#map-caption {
+  padding: 10px;
+  position: absolute;
+  top: 0;
+  background-color: #F5F5F5;
+}
+
+#demo-list {
+  list-style: none;
+  padding: 0;
+}
+
+#demo-list li{
+  width: 100%;
+  padding: 10px 30px;
+  background-color: #60729A;
+  color: #F5F5F5;
+}

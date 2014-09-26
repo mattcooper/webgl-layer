@@ -1,0 +1,179 @@
+ <!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WebGL Layer Demos</title>
+
+        <link href="//fonts.googleapis.com/css?family=Roboto:400,300,200,100&amp;subset=latin,cyrillic" rel="stylesheet">
+
+        <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+
+        <!-- WebGL Layer -->
+        <script src="CanvasLayer.js"></script>
+        <script src="ShaderProgram.js"></script>
+        <script src="libtess.cat.js"></script>
+        <script src="WebGLLayer.js"></script>
+
+        <!-- Using a JSTS Index for Spatial Queries -->
+        <script src="https://cdn.rawgit.com/bjornharrtell/jsts/ee6493f1b0bd8c635a0ecfed48595c796c5216ae/lib/javascript.util.js"></script>
+        <script src="https://cdn.rawgit.com/bjornharrtell/jsts/ee6493f1b0bd8c635a0ecfed48595c796c5216ae/lib/jsts.js"></script>
+
+        <link rel="stylesheet" type="text/css" href="style.css" />
+
+        <script>
+          var map;
+          var myLayer;
+          var center = new google.maps.LatLng(0, 0);
+
+          var defaultColor = [1.0, 0., 0.];
+          var highlightColor = [0., 0., 1.0];
+
+          var index = new jsts.index.strtree.STRtree();
+           
+          function initialize() { 
+            var mapOptions = {
+              zoom: 3,
+              center: center,
+              mapTypeId: google.maps.MapTypeId.ROADMAP,
+              disableDefaultUI: true,
+              draggable: false,
+              scrollwheel: false,
+              panControl: false
+            };
+            var mapCanvas = document.getElementById('map-canvas');
+            map = new google.maps.Map(mapCanvas, mapOptions);
+
+            //Set up DrawingManager
+            var drawingManager = new google.maps.drawing.DrawingManager({
+              drawingMode: google.maps.drawing.OverlayType.POLYLINE,
+              drawingControl: true,
+              drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [
+                  google.maps.drawing.OverlayType.POLYGON,
+                  google.maps.drawing.OverlayType.POLYLINE
+                ]
+              }
+            });
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'overlaycomplete', overlaySearch);
+              
+            //set up WebGL
+            myLayer = new WebGLLayer(map);
+
+            google.maps.event.addDomListener(window, 'resize', function() {
+                map.setCenter(center);
+            });
+
+            myLayer.loadGeoJson('countries.geo.json');
+
+            //Overwrite onAddFeature to add features to index
+            var reader = new jsts.io.GeoJSONReader();
+            myLayer.onAddFeature = function(feature){
+              var feat = reader.read(feature);
+              //Try inserting the point into the index. Won't work if the index has already been built.
+              try{
+                index.insert(feat.geometry.getEnvelopeInternal(), feat);
+              }catch(e){
+                
+              }
+            }
+
+            myLayer.start(); //Starts the rendering loop.
+          }
+
+          var overlaySearch = function(event){
+
+            var geometryFactory = new jsts.geom.GeometryFactory();
+            var reader = new jsts.io.WKTReader(geometryFactory);
+
+            var overlay = event.overlay;
+
+            var wkt = overlayToWKT(overlay, event.type);
+
+            var geom = reader.read(wkt);
+
+            switch(event.type){
+              case google.maps.drawing.OverlayType.POLYGON:
+                var env = geom.computeEnvelopeInternal();
+                break;
+              case google.maps.drawing.OverlayType.POLYLINE:
+                var buffer = geom.buffer(0.005); 
+                var env = geom.computeEnvelopeInternal();
+                geom = buffer;
+                break;
+            }
+
+            var result = index.query(env);
+
+            for(var i = 0; i < result.length; i++){
+              var res = result[i].geometry;
+              if(res.geometries){
+                res.geometries.map(function(resGeom){
+                  if(geom.intersects(resGeom)){
+                    var idxStart = result[i].properties.indexStart;
+                    var idxEnd = result[i].properties.indexEnd;
+                    myLayer.changePolyColor(idxStart, idxEnd, highlightColor);
+                  }
+                })
+              }else if(res.intersects(geom)){
+                switch(res.getGeometryType()){
+                  case 'Point':
+                    var idx = result[i].properties.index;
+                    myLayer.changePointColor(idx, highlightColor);
+                    break;
+                  case 'Polygon':
+                    var idxStart = result[i].properties.indexStart;
+                    var idxEnd = result[i].properties.indexEnd;
+                    myLayer.changePolyColor(idxStart, idxEnd, highlightColor);
+                    break;
+                }
+              }
+            }
+          }
+
+          var overlayToWKT = function(overlay, type){
+            var path = overlay.getPath();
+            switch(type){
+              case google.maps.drawing.OverlayType.POLYGON:
+                var wkt = 'POLYGON((' + path.getAt(0).lng() + ' ' + path.getAt(0).lat();
+                for(var i = 1; i < path.getLength(); i++){
+                  var latlng = path.getAt(i);
+                  wkt = wkt + ', ' + latlng.lng() + ' ' + latlng.lat();
+                }
+                wkt = wkt + ', ' + path.getAt(0).lng() + ' ' + path.getAt(0).lat() + '))';
+                return wkt;
+              case google.maps.drawing.OverlayType.POLYLINE:
+                var wkt = 'LINESTRING( ' + path.getAt(0).lng() + ' ' + path.getAt(0).lat();
+                  for(var i = 1; i < path.getLength(); i++){
+                    var latlng = path.getAt(i);
+                    wkt = wkt + ', ' + latlng.lng() + ' ' + latlng.lat();
+                  }
+                wkt = wkt + ')';
+                return wkt;
+            }
+          }
+
+          google.maps.event.addDomListener(window, 'load', initialize);
+        </script>
+
+      </head>
+      <body>
+        <a href="https://github.com/mattcooper/webgl-layer"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+        <div id="headline">
+          <div class="container">
+            <header>
+              <h1><a href="index.html">WebGL Layer</a></h1>
+              <p>Spatial Queries on Polygons</p>
+            </header>
+          </div>
+        </div>
+        <div id="info">
+          <div id="map-canvas">
+        </div>
+        <footer>
+          <p></p>
+        </footer>
+          </body>
+    </html>

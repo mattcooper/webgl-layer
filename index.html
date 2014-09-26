@@ -1,0 +1,119 @@
+ <!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WebGL Layer Demos</title>
+
+        <link href="//fonts.googleapis.com/css?family=Roboto:400,300,200,100&amp;subset=latin,cyrillic" rel="stylesheet">
+
+        <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+
+        <!-- WebGL Layer -->
+        <script src="CanvasLayer.js"></script>
+        <script src="ShaderProgram.js"></script>
+        <script src="libtess.cat.js"></script>
+        <script src="WebGLLayer.js"></script>
+
+        <link rel="stylesheet" type="text/css" href="style.css" />
+
+        <script>
+          var map;
+          var myLayer;
+          var center = new google.maps.LatLng(51.507413, -0.127802);
+           
+          function initialize() { 
+            var mapOptions = {
+              zoom: 13,
+              center: center,
+              mapTypeId: google.maps.MapTypeId.ROADMAP,
+              disableDefaultUI: true,
+              draggable: false,
+              scrollwheel: false,
+              panControl: false
+            };
+            var mapCanvas = document.getElementById('header-map');
+            map = new google.maps.Map(mapCanvas, mapOptions);
+              
+            myLayer = new WebGLLayer(map);
+
+            google.maps.event.addDomListener(window, 'resize', function() {
+                map.setCenter(center);
+            });
+
+            // myLayer.tilebase = 'http://130.211.58.85:8080/postcodes/';
+            // myLayer.zoomlock = 12;
+
+            myLayer.loadGeoJson('postcodes.geojson');
+
+            // google.maps.event.addListenerOnce(map, 'idle', function(){
+            //   generateData(100000);
+            // });
+
+            myLayer.start(); //Starts the rendering loop.
+          }
+
+          function generateData(n) {
+            var randInRange = function(from, to, fixed) {return (Math.random() * (to - from) + from).toFixed(fixed) * 1;}; 
+            var res = {
+              'type': 'FeatureCollection',
+              'features': []
+            }
+            console.log(map)
+            var bounds = map.getBounds();
+            console.log(bounds);
+            var ne = bounds.getNorthEast();
+            var sw = bounds.getSouthWest();
+            for(var i = 0; i < n; i++){
+              var lat = randInRange(sw.lat(), ne.lat(), 8);
+              var lng = randInRange(ne.lng(), sw.lng(), 8);
+              var point = {"geometry": {"type": "Point", "coordinates": [lng, lat]}, "type": "Feature", "properties": {}}
+              res.features.push(point);
+            }
+            console.log(res);
+            myLayer.loadData(res);
+          }
+
+          google.maps.event.addDomListener(window, 'load', initialize);
+        </script>
+
+      </head>
+      <body>
+        <a href="https://github.com/mattcooper/webgl-layer"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+        <div id="headline">
+          <div class="container">
+            <header>
+              <h1>WebGL Layer</h1>
+              <p>An extension to combine WebGL and Google Maps.</p>
+            </header>
+          </div>
+        </div>
+        <div id="info">
+          <div id="header-map"></div>
+          <div id="map-caption">UK Postcode data in Central London. Around 80,000 points.</div>
+          <div class="container">
+            <h3>WebGL Layer is an experimental extension of Google Maps to provide support for WebGL integration and data manipulation.</h3>
+            <ul id="feature-list">
+              <li>Can load GeoJSON data and display with WebGL.</li>
+              <li>Hooks for changing properties of data like color</li>
+              <li>Generic shaders that can be overwritten or built upon</li>
+              <li>Support for Vector tile servers</li>
+            </ul>
+          </div>
+          <div class="container">
+              <h3>Demos</h3>
+              <ul id="demo-list">
+                <li>
+                  <h4><a href="polygons.html">Polygons and Spatial Queries</a></h4>
+                  <p>Running spatial queries over Country Border polygons by using the Google Maps drawing manager.</p>
+                </li>
+              </ul>
+          </div>
+          <div class="container">
+            <h2><a href="https://github.com/mattcooper/webgl-layer">Visit the Github Repo</a></h2>
+          </div>
+        </div>
+        <footer>
+          <p></p>
+        </footer>
+          </body>
+    </html>
