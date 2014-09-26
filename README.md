@@ -1,7 +1,7 @@
 WebGL Layer
 =========
 
-WebGL Layer is an experimental extension of Google Maps to provide support for WebGL integration and data manipulation. WebGL Layer provides you with:
+[WebGL Layer](http://mattcooper.github.io/webgl-layer/index.html) is an experimental extension of Google Maps to provide support for WebGL integration and data manipulation. WebGL Layer provides you with:
 
 * Ability to load GeoJSON data and display with WebGL.
 * Ability to alter some properties of loaded data (i.e color).
