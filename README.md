@@ -1,3 +1,5 @@
+![WebGL Sample](http://mattcooper.github.io/webgl-layer/screenshot.png)
+
 WebGL Layer
 =========
 
