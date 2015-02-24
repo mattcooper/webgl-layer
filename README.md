@@ -72,7 +72,7 @@ var myLayer = new WebGLLayer(map);
 myLayer.loadData({"type": "FeatureCollection", features: {..}});
 
 //Loading GeoJSON from an external source.
-myLayer.loadGeoJSON(‘//myserver.co.uk/my.geo.json’);
+myLayer.loadGeoJson(‘//myserver.co.uk/my.geo.json’);
 
 myLayer.start();
 ```
