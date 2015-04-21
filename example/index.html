@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+    <head>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=places,drawing"></script>
+
+        <!-- Import WebGL Layer and Dependencies. -->
+        <script src="../CanvasLayer.js"></script>
+        <script src="../ShaderProgram.js"></script>
+        <script src="../libtess.cat.js"></script>
+        <script src="../WebGLLayer.js"></script>
+
+        <style type="text/css">
+            html, body, #map-canvas {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #map-canvas {
+                position: relative;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map-canvas"></div>
+
+        <script type="text/javascript">
+            $( document ).ready(function() {
+                function initialize() {
+                    var mapOptions = {
+                        center: { lat: 51.50711, lng: -0.123124},
+                        zoom: 8
+                    };
+                    var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+                    var geoJson = {
+                        "type": "FeatureCollection",
+                        "features": [
+                            {
+                                "type": "Feature",
+                                "geometry": {"type": "Point", "coordinates": [-0.123124, 51.50711]},
+                                "properties": {"prop0": "value0"}
+                            }
+                        ]
+                    };
+
+                    var myLayer;
+                    myLayer = new WebGLLayer(map);
+                    myLayer.loadData(geoJson);
+                    myLayer.start();
+                }
+                google.maps.event.addDomListener(window, 'load', initialize);
+            });
+        </script>
+    </body>
+</html>

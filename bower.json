@@ -1,0 +1,25 @@
+{
+  "name": "webgl-layer",
+  "version": "0.0.1",
+  "homepage": "https://github.com/korczis/webgl-layer",
+  "authors": [
+    "Matt Cooper <matt@mcooper.co.uk>"
+  ],
+  "description": "Experimental extension of Google Maps to provide support for WebGL integration and data manipulation",
+  "main": "WebGLLayer.js",
+  "moduleType": [
+    "amd"
+  ],
+  "keywords": [
+    "GoogleMaps",
+    "WebGL"
+  ],
+  "license": "Apache2",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
