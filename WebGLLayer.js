@@ -426,44 +426,69 @@ WebGLLayer.prototype.loadData = function(data){
     var geometry = feature.geometry;
 
     switch(geometry.type) {
-
       case 'Point':
-        var xy = WebGLLayer.coordsToXY_(geometry.coordinates);
-
-        this.features_.points.floats.push(xy[0]);
-        this.features_.points.floats.push(xy[1]);
-        this.features_.points.floats.push(WebGLLayer.packColor(this.features_.points.defaultColor));
-        
-        feature.properties.index = this.features_.points.count++;
-
-        this.features_.points.changed = true;
-
-        this.onAddFeature(feature);
+        this.loadPointData(feature, geometry);
         break;
       case 'Polygon':
-        feature.properties.indexStart = this.features_.polygons.count;
-        var borderCount = this.features_.polygons.borderCount;
-        this.processPolygon(geometry.coordinates);
-        this.features_.polygons.borderCounts.push(this.features_.polygons.borderCount - borderCount);      
-        feature.properties.indexEnd = this.features_.polygons.count;
-        
-        this.features_.polygons.changed = true;
-        this.onAddFeature(feature);
+        this.loadPolygonData(feature, geometry);
         break;
       case 'MultiPolygon':
-        feature.properties.indexStart = this.features_.polygons.count;
-        for(var j = 0; j < geometry.coordinates.length; j++){
-          var borderCount = this.features_.polygons.borderCount;
-          this.processPolygon(geometry.coordinates[j]);
-          this.features_.polygons.borderCounts.push(this.features_.polygons.borderCount - borderCount);
-        }
-        feature.properties.indexEnd = this.features_.polygons.count;
-
-        this.features_.polygons.changed = true;
-        this.onAddFeature(feature);
+        this.loadMultiPolygonData(feature, geometry);
+        break;
     }
   }
   this.scheduleUpdate();
+}
+
+WebGLLayer.prototype.loadMultiPolygonData = function(feature, geometry){
+  if(!geometry) {
+    geometry = feature.geometry;
+  }
+
+  feature.properties.indexStart = this.features_.polygons.count;
+  for(var j = 0; j < geometry.coordinates.length; j++){
+    var borderCount = this.features_.polygons.borderCount;
+    this.processPolygon(geometry.coordinates[j]);
+    this.features_.polygons.borderCounts.push(this.features_.polygons.borderCount - borderCount);
+  }
+  feature.properties.indexEnd = this.features_.polygons.count;
+
+  this.features_.polygons.changed = true;
+  this.onAddFeature(feature);
+}
+
+
+WebGLLayer.prototype.loadPointData = function(feature, geometry){
+  if(!geometry) {
+    geometry = feature.geometry;
+  }
+
+  var xy = WebGLLayer.coordsToXY_(geometry.coordinates);
+
+  this.features_.points.floats.push(xy[0]);
+  this.features_.points.floats.push(xy[1]);
+  this.features_.points.floats.push(WebGLLayer.packColor(this.features_.points.defaultColor));
+
+  feature.properties.index = this.features_.points.count++;
+
+  this.features_.points.changed = true;
+
+  this.onAddFeature(feature);
+}
+
+WebGLLayer.prototype.loadPolygonData = function(feature, geometry){
+  if(!geometry) {
+    geometry = feature.geometry;
+  }
+
+  feature.properties.indexStart = this.features_.polygons.count;
+  var borderCount = this.features_.polygons.borderCount;
+  this.processPolygon(geometry.coordinates);
+  this.features_.polygons.borderCounts.push(this.features_.polygons.borderCount - borderCount);
+  feature.properties.indexEnd = this.features_.polygons.count;
+
+  this.features_.polygons.changed = true;
+  this.onAddFeature(feature);
 }
 
 /**
