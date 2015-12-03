@@ -168,22 +168,23 @@ WebGLLayer.DEFAULT_POINT_FRAG_SHADER_ = [
  * Default vertex shader source.
  * @private {string}
  */
-WebGLLayer.DEFAULT_POINT_VERT_SHADER_ = [
+WebGLLayer.vertShaderConfig_ = function(size){
+  size = size || 2;
+  return [
     'precision mediump float;',
-
     'attribute vec4 worldCoord;',
     'attribute float aColor;',
-
     'uniform mat4 mapMatrix;',
-
     'varying mediump float vColor;',
-
     'void main() {',
     '  gl_Position = mapMatrix * worldCoord;',
-    '  gl_PointSize = 2.;',
+    '  gl_PointSize = ' + size + '.;',
     '  vColor = aColor;',
     '}'
-].join('\n');
+  ].join('\n');
+}
+
+WebGLLayer.DEFAULT_POINT_VERT_SHADER_ = WebGLLayer.vertShaderConfig_(2);
 
 /**
  * Converts from latitude to vertical world coordinate.
@@ -367,6 +368,13 @@ WebGLLayer.prototype.changePointColor = function(idx, color){
   this.features_.points.floats[idx*3 + 2] = WebGLLayer.packColor(color);
   this.features_.points.changed = true;
   this.scheduleUpdate();
+}
+
+WebGLLayer.prototype.changePointSize = function(size){
+  if (typeof size !== 'number') return console.log("Error: customPointSize expects number input");
+
+  WebGLLayer.DEFAULT_POINT_VERT_SHADER_ = WebGLLayer.vertShaderConfig_(size);
+  this.pointProgram_ = new ShaderProgram(this.gl_, WebGLLayer.DEFAULT_POINT_VERT_SHADER_, WebGLLayer.DEFAULT_POINT_FRAG_SHADER_);
 }
 
 /**

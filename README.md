@@ -112,4 +112,6 @@ You can then run powerful queries on the data and use the index property on the 
 var result = ... //Query result.
 var idx = result.properties.index;
 myLayer.changePointColor(idx, [0., 0., 1.]); //Change color to blue
+myLayer.changePointSize(4);
+myLayer.start();
 ```
