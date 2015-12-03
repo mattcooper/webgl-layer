@@ -469,6 +469,7 @@ WebGLLayer.prototype.loadPointData = function(feature, geometry){
   this.features_.points.floats.push(xy[1]);
   this.features_.points.floats.push(WebGLLayer.packColor(this.features_.points.defaultColor));
 
+  if (!feature.hasOwnProperty('properties')) feature.properties = {};
   feature.properties.index = this.features_.points.count++;
 
   this.features_.points.changed = true;
