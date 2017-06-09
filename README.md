@@ -82,7 +82,7 @@ From a tileserver:
 var myLayer = new WebGLLayer(map);
 
 //Expects a base of a tileserver URL, i.e something that can be appended to to make a full tile URL.
-myLayer.tilebase(‘//tileserver.com/layer/’);
+myLayer.tilebase = '//tileserver.com/layer/';
 
 //optional attribute that forces WebGL Layer to only load tiles at a certain zoom level,
 myLayer.zoomlock = 12;
